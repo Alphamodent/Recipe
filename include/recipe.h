@@ -25,6 +25,7 @@ public:
     std::vector<std::string> getInstructions() const;
     int getRating() const;
     std::string getCategory() const;
+
     // Setters
     void setRating(int stars);
     void setCategory(const std::string& cat);
