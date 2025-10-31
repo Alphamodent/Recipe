@@ -1,4 +1,4 @@
-# recipe simulator
+# Dark Age
 A small, turn-based console RPG where you explore a grid map, battle enemies, manager inventory and health
 
 ## Features
