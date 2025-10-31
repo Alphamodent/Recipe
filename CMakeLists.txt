@@ -7,8 +7,8 @@ include_directories(include)
 # Source files (add more as you create them)
 set(SOURCES
         src/main.cpp
-        # src/recipe.cpp # Uncomment when you create implementation files
-        # src/recipe_manager.cpp
+        # src/Game.cpp # Uncomment when you create implementation files
+        # src/GameManager.cpp
 )
 # Create executable
-add_executable(recipe_manager ${SOURCES})
+add_executable(GameManager ${SOURCES})

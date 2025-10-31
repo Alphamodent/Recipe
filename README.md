@@ -1,9 +1,10 @@
-# Console RPG Game
-A simple command-line role-playing game where the player explores a map, battles enemies, and collects items.
+# recipe simulator
+A small, turn-based console RPG where you explore a grid map, battle enemies, manager inventory and health
 
 ## Features
-- Create and customize a player character (name, health, attack)
-- Explore a grid-based world map
-- Encounter and battle enemies (Goblin, Orc, Skeleton)
-- Collect, use, and manage items in an inventory
-- Save and load game progress from files
+- New Game & create Character, Enemy and NPC 
+- Map Movement (W/A/S/D) with simple world map.
+- Inventory: wear armor
+- Turn-based combat: adjacent combat attack
+- command line for display status or quit game
+- enemies will be disappeared when defeated.

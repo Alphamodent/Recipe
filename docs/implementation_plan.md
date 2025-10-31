@@ -1,193 +1,137 @@
-# Implementation Plan
+# Implementation Plan — Dark Age 
 
-## Feature 1: Add New Recipe
-**Trigger**: User selects "Add new recipe" from main menu  
-**Input Needed**:
-- Recipe name (string)
-- Ingredients (list of strings)
-- Instructions (list of strings)
-- Category (string)
-
-**Implementation Flow**:
-1. In `main()`, after user selects add recipe option:
-   - Prompt user for recipe name
-   - Create new `Recipe` object using `Recipe(name)` constructor
-   - Prompt for number of ingredients  
-     → Loop to get each ingredient  
-     → Call `recipe.addIngredient(ingredient)`
-   - Prompt for number of instructions  
-     → Loop to get each instruction  
-     → Call `recipe.addInstruction(instruction)`
-   - Prompt for category  
-     → Call `recipe.setCategory(category)`
-   - Call `manager.addRecipe(recipe)` to add to collection
-2. `RecipeManager::addRecipe()`:
-   - Takes `Recipe` object as parameter
-   - Pushes recipe onto `recipes` vector
-   - Prints confirmation message
-3. Returns to main menu
-
-**Data Modified**:
-- New `Recipe` object created
-- Recipe added to `RecipeManager::recipes` vector
-
-**Completion**:
-- Displays “Recipe added successfully!”
-
-**Functions Used**:
-- `Recipe::Recipe(const string&)`
-- `Recipe::addIngredient(const string&)`
-- `Recipe::addInstruction(const string&)`
-- `Recipe::setCategory(const string&)`
-- `RecipeManager::addRecipe(const Recipe&)`
+**Spec Summary**
+- **Movement**: `up`, `down`, `left`, `right`  (mapped from **W/A/S/D**).
+- **Single player**
+- **Equipment**: `wear armor` / `remove armor` (simple toggle).
+- **Combat**: **player acts first**; **enemies do not move** (they only attack if already adjacent).
+- **Conversation**: `talk` to an adjacent NPC.
+- **Help menu shows exactly**: `quit`, `inventory` (show items/equipment), `health` (show HP).
 
 ---
 
-## Feature 2: Search Recipes by Ingredient
-**Trigger**: User selects “Search recipes” from main menu and chooses ingredient search  
-**Input Needed**:
-- Ingredient to search for (string)
+## Feature 1: New Game & Character Creation
 
-**Implementation Flow**:
-1. In `main()`, after user selects search option:
-   - Display search submenu
-   - User selects “search by ingredient”
-   - Prompt for ingredient name
-   - Call `manager.searchByIngredient(ingredient)`
-2. `RecipeManager::searchByIngredient()`:
-   - Creates empty `vector<Recipe*> results`
-   - Loops through all recipes in `recipes`
-   - For each recipe → call `recipe.hasIngredient(ingredient)`
-   - If true, add pointer to `results`
-   - Return `results` vector
-3. Back in `main()`:
-   - If results empty → print “No recipes found”
-   - Else:
-      - Print “Found X recipes:”
-      - Loop through `results` and call `recipe->display()`
+**Trigger**: Main menu → **New Game**.  
+**Inputs**: player name (string), player class (string: Warrior/Rogue/Mage).
 
-**Data Modified**:
-- None (read-only operation)
-- Temporary `results` vector created
+**Flow**
+1. `GameManager::run()` → user choose **New Game** → `actionStartNew_()`.
+2. Prompts for name/class.
+3. `game->startNew(name, class)`:
+    - Allocate the single `Player`.
+    - Create a simple `Map` (grid).
+    - Spawn a few **stationary** `Enemy` objects and some `NPC` objects.
+    - Set `running=true`, `turnCount=0`.
+4. Call `game->render()` to show a brief intro/state snapshot.
 
-**Completion**:
-- Displays matching recipes or “No recipes found”
+**State Changes**: `player`, `map`, `enemies`, `npcs`, `running`, `turnCount`.  
+**Done when**: the session is active and the user can **Continue**.
 
-**Functions Used**:
-- `RecipeManager::searchByIngredient(const string&)`
-- `Recipe::hasIngredient(const string&) const`
-- `Recipe::display() const`
+**Functions**: `GameManager::actionStartNew_()`, `Game::startNew(...)`, `Game::render()`.
 
 ---
 
-## Feature 3: Display All Recipes
-**Trigger**: User selects “View all recipes” from main menu  
-**Input Needed**: None
+## Feature 2: Movement (up/down/left/right via W/A/S/D)
 
-**Implementation Flow**:
-1. In `main()`, detect user selection “View all recipes”
-2. Call `manager.displayAllRecipes()`
-3. Inside `RecipeManager::displayAllRecipes()`:
-   - If `recipes` vector empty → print “No recipes available”
-   - Else loop through all recipes  
-     → Call `recipe.display()` for each
-4. Return to main menu
+**Trigger**: In-session command: `w`, `a`, `s`, or `d`.  
+**Mapping**:
+- `w` → **up** → `Game::tryMoveUp()`
+- `a` → **left** → `Game::tryMoveLeft()`
+- `s` → **down** → `Game::tryMoveDown()`
+- `d` → **right** → `Game::tryMoveRight()`
 
-**Data Modified**:
-- None (read-only operation)
+**Flow**
+1. `GameManager::actionContinue_()` reads the command line.
+2. `Game::processCommand(cmd)` maps to movement methods above.
+3. `Game::handleMovement_("up"|"down"|"left"|"right")` validates map bounds/walls.
+4. Call `update()` to complete the turn; `render()` prints the new state.
 
-**Completion**:
-- Displays full list of recipes
+**State Changes**: player position on `Map`; `turnCount++`.  
+**Done when**: one turn has elapsed (player phase + enemy phase).
 
-**Functions Used**:
-- `RecipeManager::displayAllRecipes() const`
-- `Recipe::display() const`
+**Functions**: `Game::processCommand`, `Game::tryMoveUp/Down/Left/Right`, `Game::update()`, `Game::render()`.
 
 ---
 
-## Feature 4: Rate a Recipe
-**Trigger**: User chooses “Rate a recipe” from main menu  
-**Input Needed**:
-- Recipe name (string)
-- Rating value (int 1–5)
+## Feature 3: Equipment — Wear/Remove Armor
 
-**Implementation Flow**:
-1. In `main()`, detect “Rate a recipe” option
-2. Prompt for recipe name → call `manager.findRecipeByName(name)`
-3. If recipe found:
-   - Prompt for rating value
-   - Call `recipe->addRating(rating)`
-   - Print confirmation message
-4. If not found:
-   - Print “Recipe not found”
-5. Return to menu
+**Trigger**: `wear armor` (or `remove armor`).  
+**Assumption**: Armor exists by default (no pickup).
 
-**Data Modified**:
-- Updates the recipe’s `ratings` list or average rating value
+**Flow**
+1. `Game::processCommand("wear armor")` → `tryWearArmor()`; sets `equippedArmor=true` if not already set.
+2. `remove armor` → `tryRemoveArmor()`; sets `equippedArmor=false`.
+3. Armor provides a flat damage reduction (e.g., −1 per enemy hit).
+4. After command, `update()` advances the turn and `render()` prints status.
 
-**Completion**:
-- Displays “Thank you for rating!”
-
-**Functions Used**:
-- `RecipeManager::findRecipeByName(const string&)`
-- `Recipe::addRating(int)`
-- `Recipe::getAverageRating() const`
+**State Changes**: `Player::equippedArmor` (bool), effective defense.  
+**Functions**: `Game::tryWearArmor()`, `Game::tryRemoveArmor()`, `Game::update()`, `Game::render()`.
 
 ---
 
-## Feature 5: Save Recipes to File
-**Trigger**: User selects “Save recipes” from main menu  
-**Input Needed**:
-- File name (string) or default path
+## Feature 4: Turn-Based Combat (Player First; Enemies Stationary)
 
-**Implementation Flow**:
-1. In `main()`, detect “Save recipes” option
-2. Call `manager.saveToFile("recipes.txt")`
-3. Inside `RecipeManager::saveToFile()`:
-   - Open output file stream
-   - Loop through all `recipes`
-   - For each, call `recipe.serialize(ofstream&)`
-   - Write data fields: name, category, ingredients, instructions, ratings
-   - Close file
-4. Return to main menu
+**Trigger**: `attack` when an enemy is adjacent/in range.  
+**Turn Order**
+1. **Player phase**: resolve player intent (e.g., `attack`).
+2. **Enemy phase**: **stationary** enemies **do not move**; if adjacent, they attack; otherwise they skip.
+3. End: `cleanupDeadEntities_()`, increment `turnCount`.
 
-**Data Modified**:
-- Creates/overwrites external text file
+**Flow**
+1. `Game::processCommand("attack")` → `tryAttack()` (sets player attack intent).
+2. `Game::update()`:
+    - `resolvePlayerPhase_()` → `handleCombat_()` applies player damage first.
+    - `resolveEnemyPhase_()` → adjacent enemies (only) apply damage.
+3. `cleanupDeadEntities_()` removes defeated enemies; `render()` prints summary.
 
-**Completion**:
-- Displays “Recipes saved successfully!”
+**State Changes**: Enemy HP, Player HP, `turnCount++`.  
+**Game Over**: if Player HP ≤ 0 → `running=false`.
 
-**Functions Used**:
-- `RecipeManager::saveToFile(const string&) const`
-- `Recipe::serialize(ofstream&) const`
+**Functions**: `Game::tryAttack()`, `Game::update()`, `Game::render()`.
 
 ---
 
-## Feature 6: Load Recipes from File
-**Trigger**: Program startup or user selects “Load recipes” from main menu  
-**Input Needed**:
-- File name (string) or default path
+## Feature 5: Conversation with NPC
 
-**Implementation Flow**:
-1. In `main()`, detect load command or auto-load at startup
-2. Call `manager.loadFromFile("recipes.txt")`
-3. Inside `RecipeManager::loadFromFile()`:
-   - Open input file stream
-   - Read recipe data line by line
-   - For each, create new `Recipe` object
-   - Populate ingredients, instructions, ratings
-   - Push recipe into `recipes` vector
-   - Close file
-4. Print count of loaded recipes
-5. Return to main menu
+**Trigger**: `talk` when adjacent to an NPC.  
+**Flow**
+1. `Game::processCommand("talk")` → `tryTalkToNPC()` checks adjacency.
+2. Print one line of dialog and up to 2–3 numbered replies.
+3. Record a simple flag (e.g., `npcMet=true`) to unlock a hint or tiny buff.
+4. Call `update()` to finish the turn; `render()` shows the chosen line.
 
-**Data Modified**:
-- Adds new `Recipe` objects to `RecipeManager::recipes`
+**State Changes**: Per-NPC conversation flags.  
+**Functions**: `Game::tryTalkToNPC()`, `Game::update()`, `Game::render()`.
 
-**Completion**:
-- Displays “X recipes loaded successfully!”
+---
 
-**Functions Used**:
-- `RecipeManager::loadFromFile(const string&)`
-- `Recipe::deserialize(ifstream&)`
+## Feature 6: Help Menu & Status Commands
+
+**Help Menu Requirement**: when the user chooses **Help** in the main menu (or types `help` in-session), it must list exactly:
+- `quit` — exit the session
+- `inventory` — show items/equipment
+- `health` — show current HP
+
+**Status Commands**
+- `inventory` → `Game::showInventory()`
+- `health` → `Game::showHealth()`
+
+**Functions**: `GameManager::actionHelp_()`, `Game::showInventory() const`, `Game::showHealth() const`.
+
+---
+
+## Update/Render Loop Contract
+
+**`Game::processCommand(input)`**  
+Parses `input` to one of: `tryMoveUp/Down/Left/Right`, `tryAttack`, `tryWearArmor`, `tryRemoveArmor`, `tryTalkToNPC`, `showInventory`, `showHealth`, or `quit`.
+
+**`Game::update()`**
+1. `resolvePlayerPhase_()` — act on the chosen intent.
+2. `resolveEnemyPhase_()` — adjacent enemies attack; others skip (no movement).
+3. `cleanupDeadEntities_()`; `turnCount++`.
+
+**`Game::render() const`**  
+Print compact snapshot: turn, player HP, armor state, tile description, nearby enemies/NPCs.
+
 
